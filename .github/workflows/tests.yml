@@ -1,0 +1,15 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: shellcheck linux/*.sh tests/*.sh
+      - run: sh tests/test_make_page.sh
+      - run: sh tests/test_make_page_real.sh

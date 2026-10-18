@@ -1,0 +1,13 @@
+[Unit]
+Description=noVNC web client for the desktop (VNC password asked in the browser unless given in the URL)
+After=x11vnc.service network-online.target
+Wants=x11vnc.service
+
+[Service]
+User=__USER__
+ExecStart=/usr/bin/websockify --web /usr/share/novnc __PORT__ 127.0.0.1:5900
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+# A Home Assistant dashboard view (sections) with the desktop full width. Paste it into the raw configuration editor
+# of a dashboard, under `views:`. Replace the URL (LAN, or your Cloudflare hostname with the path key, see README).
+# `password=` makes noVNC connect without asking; leave it out to type the VNC password each time.
+title: Desktop
+path: desktop
+icon: mdi:monitor-screenshot
+type: sections
+max_columns: 4
+theme: VNC Control            # examples/themes/vnc_control.yaml: no side margins, small top margin, black borders
+sections:
+  - type: grid
+    column_span: 4
+    cards:
+      - type: heading
+        heading: Desktop
+        icon: mdi:monitor
+        grid_options:
+          columns: full
+        badges:
+          - type: button
+            text: Open in a tab
+            icon: mdi:open-in-new
+            tap_action:
+              action: url
+              url_path: &url https://desktop.example.com/PATH-KEY/vnc-control.html?autoconnect=1&resize=scale&reconnect=1&show_dot=1&password=VNC-PASSWORD
+      - type: iframe
+        url: *url
+        aspect_ratio: 1024x600   # your screen's resolution
+        grid_options:
+          columns: full
+          # Sections views ignore aspect_ratio: the height is a whole number of rows (~62 px each with the theme).
+          # Pick the largest value that does not make the page scroll on your screen (15 for 1024x600 on 1080p).
+          rows: 15

@@ -1,0 +1,6 @@
+# Home Assistant theme for the desktop view: put it in /config/themes/ (with `frontend: themes: !include_dir_merge_named themes`
+# in configuration.yaml), call the `frontend.reload_themes` action and choose it as the view's theme.
+VNC Control:
+  ha-view-sections-column-gap: 0px      # no side margins: the frame (and noVNC's side tab) reaches the edges
+  ha-view-sections-row-gap: 6px         # small space above the title (default 24px)
+  ha-card-border-color: "#000000"       # no grey outline around the frame

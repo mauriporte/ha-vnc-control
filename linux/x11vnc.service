@@ -1,0 +1,15 @@
+[Unit]
+Description=x11vnc: share the real desktop (:0), localhost only; noVNC publishes it
+After=display-manager.service
+Requires=display-manager.service
+
+[Service]
+User=__USER__
+# -localhost: only noVNC (same machine) can reach the VNC port. While the login screen is up x11vnc may exit;
+# Restart=always brings it back once the session is running (enable autologin, see the README).
+ExecStart=/usr/bin/x11vnc -display :0 -auth guess -forever -shared -localhost -rfbport 5900 -rfbauth __HOME__/.vnc/passwd -noxdamage -quiet
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target
