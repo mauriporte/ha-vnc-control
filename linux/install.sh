@@ -38,7 +38,7 @@ if [ ! -f /etc/vnc-control/config.json ]; then
 fi
 # this machine's own desktop is the first session (edit or remove it later through the API)
 [ -f /etc/vnc-control/sessions.json ] || printf '[{"name": "%s", "token": "%s", "host": "127.0.0.1", "port": 5900, "width": 1920, "height": 1080, "password": ""}]\n' \
-    "$(hostname)" "$(hostname | tr 'A-Z' 'a-z' | tr -c 'a-z0-9\n' '-')" > /etc/vnc-control/sessions.json
+    "$(hostname)" "local" > /etc/vnc-control/sessions.json  # the service derives the real token from the name
 chown "$user" /etc/vnc-control/sessions.json; chmod 600 /etc/vnc-control/sessions.json
 
 sh "$here/make_page.sh" "$web/vnc.html" "$web/vnc-control.html"

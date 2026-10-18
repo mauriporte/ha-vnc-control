@@ -9,19 +9,24 @@
      one is a single bar with its name and has no frame, so its VNC connection is closed. State is kept per browser. -->
 <style>
   html, body { margin: 0; background: #000; color: #e1e1e1; font: 14px Roboto, "Segoe UI", system-ui, sans-serif; overflow-x: hidden; }
-  .s { display: flex; margin-bottom: 6px; }
-  .s:not(.closed)::before { content: ""; width: 30px; flex: none; }  /* left band as wide as the control strip: symmetric, noVNC's tab starts at the screen's edge */
+  /* Open session: the frame spans the full width (noVNC's blue tab sits on the left edge) and is sized so the black
+     bands on both sides are exactly as wide as that tab (TAB in the script); the controls float over the right band. */
+  .s { display: flex; position: relative; }
+  .s + .s { margin-top: 6px; }
   .s.closed { height: 32px; align-items: center; gap: 8px; padding: 0 2px; cursor: pointer; user-select: none; }
-  .s.closed .side { flex-direction: row-reverse; width: auto; padding: 0; margin-left: auto; }
-  .s.closed .n { writing-mode: horizontal-tb; transform: none; order: -1; margin-right: auto; }
+  .s.closed .side { position: static; flex-direction: row-reverse; width: auto; padding: 0; margin-left: auto; gap: 6px; }
+  .s.closed .b { width: 28px; height: 28px; background: #1c1c1c; }
+  .s.closed .b svg { width: 18px; height: 18px; }
+  .s.closed .n { writing-mode: horizontal-tb; transform: none; order: -1; margin-right: auto; font-size: 14px; }
   iframe { display: block; flex: 1; min-width: 0; border: 0; background: #000; }
-  .side { width: 30px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 2px; }
-  .b { width: 28px; height: 28px; border-radius: 50%; background: #1c1c1c; display: grid; place-items: center; cursor: pointer; flex: none; }
-  .b svg { width: 18px; height: 18px; fill: #e1e1e1; }
-  .ch svg { fill: #03a9f4; width: 20px; height: 20px; transition: transform .15s; }
+  .side { position: absolute; top: 0; right: 0; width: 15px; z-index: 1; display: flex; flex-direction: column;
+          align-items: center; gap: 4px; padding-top: 2px; }
+  .b { width: 15px; height: 15px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; flex: none; }
+  .b svg { width: 13px; height: 13px; fill: #bdbdbd; }
+  .ch svg { fill: #03a9f4; width: 15px; height: 15px; transition: transform .15s; }
   .s.closed .ch svg { transform: rotate(180deg); }
-  .n { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 500; white-space: nowrap; overflow: hidden;
-       text-overflow: ellipsis; max-height: 60vh; color: #bdbdbd; }
+  .n { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 500; font-size: 11px; white-space: nowrap;
+       overflow: hidden; text-overflow: ellipsis; max-height: 60vh; color: #9e9e9e; }
   .s.closed .n { color: #e1e1e1; display: flex; align-items: center; gap: 8px; }
   .s.closed .n::before { content: ""; width: 18px; height: 18px; background: currentColor; flex: none;
     -webkit-mask: var(--mon) center/contain no-repeat; mask: var(--mon) center/contain no-repeat; }
@@ -46,13 +51,15 @@ function url(s) {
   return u;
 }
 
+const TAB = 15;  // width of noVNC's blue control-bar tab: the black bands left and right end where it ends
 function fit() {
-  // one open session fills the window height (noVNC letterboxes in black); several keep their own shape and scroll
+  // height so the screen is TAB narrower than the frame on each side; one open session never exceeds the window
+  // (then the bands grow), several keep their own shape and scroll
   const open = [...document.querySelectorAll(".s:not(.closed) iframe")];
-  const bars = [...document.querySelectorAll(".s.closed")].reduce((a, b) => a + b.offsetHeight + 6, 0);
+  const bars = [...document.querySelectorAll(".s.closed")].reduce((a, b) => a + b.offsetHeight + 6, 0);  // a bar + its gap
   for (const f of open) {
-    const byWidth = f.offsetWidth * f.dataset.h / f.dataset.w;
-    f.style.height = (open.length === 1 ? Math.min(byWidth, innerHeight - bars - 6) : byWidth) + "px";
+    const h = (f.offsetWidth - 2 * TAB) * f.dataset.h / f.dataset.w;
+    f.style.height = (open.length === 1 ? Math.min(h, innerHeight - bars) : h) + "px";
   }
 }
 
