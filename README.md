@@ -14,14 +14,24 @@ setup that makes them fit a dashboard cleanly.
 - **Clean frame**: black around the screen instead of noVNC's grey bars, no card outline, small top margin.
 - **Safe defaults**: the VNC port only listens on localhost; only the noVNC web port is exposed, behind the VNC
   password (and Cloudflare Access or a secret path, if you publish it).
+- **Several desktops**: a connector in Home Assistant adds any VNC server on your network (name, IP, port, optional
+  password); each one shows up in the viewer with its own collapse button and "open in a tab".
 - **Survives reboots**: systemd services restart x11vnc until the desktop session is up.
 
 ## How it works
 
 ```
-HA dashboard iframe ──▶ noVNC page :6080 (websockify) ──▶ x11vnc 127.0.0.1:5900 ──▶ X display :0 (the real screen)
-                         └─ optional: Cloudflare tunnel ─▶ https://desktop.example.com/<path-key>/vnc-control.html
+HA dashboard iframe ──▶ vnc-control-multi.html :6080 ──▶ one noVNC frame per session
+                         websockify (token mode) ─────▶ token "pi"     → x11vnc 127.0.0.1:5900 (this screen)
+                                                  └───▶ token "office" → any VNC server on the LAN, e.g. 10.0.0.5:5900
+HA connector ──REST──▶ vnc_control.py :8093 ──▶ writes the token files + vnc-sessions.json the viewer reads
+optional: Cloudflare tunnel ──▶ https://desktop.example.com/<path-key>/vnc-control-multi.html
 ```
+
+websockify runs with `--token-plugin TokenFile`: the page connects to `websockify?token=<name>` and websockify
+forwards to the host:port in `/etc/vnc-control/tokens/<name>`. The viewer re-reads the session list every 5 s, so
+sessions added from Home Assistant appear without reloading the dashboard. An open session keeps its controls in a
+narrow strip on the right, so the screen keeps the full height; a collapsed one closes its connection.
 
 `vnc-control.html` is noVNC's own `vnc.html` with one added style. noVNC's code paints the area around a scaled
 screen grey (an inline `rgb(40, 40, 40)`), which shows as bars whenever the frame's shape differs from the screen's.
@@ -54,13 +64,15 @@ The section must be `[Seat:*]`: the same lines under `[LightDM]` are silently ig
 
 ## Home Assistant
 
-1. Copy [`examples/themes/vnc_control.yaml`](examples/themes/vnc_control.yaml) to `/config/themes/` and call
+1. Connector: merge [`examples/home-assistant.yaml`](examples/home-assistant.yaml) (two `rest_command`s, two scripts,
+   the helpers it lists) and put the API token install.sh printed in `secrets.yaml` as `vnc_control_token`.
+2. Copy [`examples/themes/vnc_control.yaml`](examples/themes/vnc_control.yaml) to `/config/themes/` and call
    `frontend.reload_themes`.
-2. Add the view from [`examples/dashboard-view.yaml`](examples/dashboard-view.yaml) with your URL. Notes:
+3. Add the view from [`examples/dashboard-view.yaml`](examples/dashboard-view.yaml) with your URL. Notes:
    - Sections views ignore the iframe's `aspect_ratio`; the frame's height is `rows`. Pick the largest value that
      does not make the page scroll (15 fits a 1024×600 screen on a 1080p monitor).
-   - `password=` in the URL connects without asking. Leave it out to type the password, or use a VNC password you do
-     not use anywhere else, since the URL is stored in the dashboard configuration.
+   - A session's VNC password (optional) is passed to noVNC, so it connects without asking. The list the viewer reads
+     includes it: anyone who can open the viewer page can read it. Use VNC passwords you do not use anywhere else.
    - With `reconnect=1` noVNC reconnects by itself after a reboot of the machine.
 
 ## Outside your home (optional): Cloudflare tunnel

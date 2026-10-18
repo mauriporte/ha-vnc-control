@@ -1,0 +1,67 @@
+# VNC Control connector for Home Assistant: add or remove VNC sessions from a dashboard.
+# 1. secrets.yaml:  vnc_control_token: <the API token install.sh printed (or /etc/vnc-control/config.json)>
+# 2. configuration.yaml: merge this rest_command block (then call rest_command.reload or restart)
+# 3. Helpers (Settings → Devices & services → Helpers): input_text vnc_nombre, vnc_ip, vnc_contrasena (password mode),
+#    vnc_resolucion (e.g. 1920x1080); input_number vnc_puerto (box, 1-65535, 5900); input_boolean vnc_conector.
+# 4. The two scripts below (Settings → Scripts → ⋮ → Edit in YAML), and the view in dashboard-view.yaml.
+rest_command:
+  vnc_control_add:
+    url: http://VNC-CONTROL-HOST:8093/sessions
+    method: post
+    headers:
+      X-Token: !secret vnc_control_token
+      Content-Type: application/json
+    payload: >-
+      {{ {"name": name, "host": host, "port": port | int(5900), "password": password | default(""),
+          "width": width | int(1920), "height": height | int(1080)} | to_json }}
+    timeout: 15
+  vnc_control_remove:
+    url: "http://VNC-CONTROL-HOST:8093/sessions/{{ name | urlencode }}"
+    method: delete
+    headers:
+      X-Token: !secret vnc_control_token
+    timeout: 15
+
+script:
+  vnc_control_anadir:
+    alias: "VNC Control: add session"
+    icon: mdi:plus-network
+    mode: single
+    sequence:
+      - variables:
+          res: "{{ states('input_text.vnc_resolucion') | lower | replace(' ', '') }}"
+      - action: rest_command.vnc_control_add
+        response_variable: r
+        data:
+          name: "{{ states('input_text.vnc_nombre') | trim }}"
+          host: "{{ states('input_text.vnc_ip') | trim }}"
+          port: "{{ states('input_number.vnc_puerto') | int(5900) }}"
+          password: "{{ states('input_text.vnc_contrasena') if states('input_text.vnc_contrasena') not in ['unknown', 'unavailable'] else '' }}"
+          width: "{{ res.split('x')[0] | int(1920) if 'x' in res else 1920 }}"
+          height: "{{ res.split('x')[1] | int(1080) if 'x' in res else 1080 }}"
+      - if: "{{ r.status == 200 }}"
+        then:
+          - action: persistent_notification.create
+            data: {notification_id: vnc_control, title: VNC Control, message: "Session «{{ states('input_text.vnc_nombre') | trim }}» added."}
+          - action: input_text.set_value
+            target: {entity_id: [input_text.vnc_nombre, input_text.vnc_ip, input_text.vnc_contrasena]}
+            data: {value: ""}
+          - action: input_boolean.turn_off
+            target: {entity_id: input_boolean.vnc_conector}
+        else:
+          - action: persistent_notification.create
+            data: {notification_id: vnc_control, title: "VNC Control: error", message: "{{ r.content.error if r.content is mapping else r.content }}"}
+  vnc_control_quitar:
+    alias: "VNC Control: remove session"
+    icon: mdi:minus-network
+    mode: single
+    sequence:
+      - action: rest_command.vnc_control_remove
+        response_variable: r
+        data:
+          name: "{{ states('input_text.vnc_nombre') | trim }}"
+      - action: persistent_notification.create
+        data:
+          notification_id: vnc_control
+          title: VNC Control
+          message: "{{ 'Session removed.' if r.status == 200 else 'No session with that name.' }}"

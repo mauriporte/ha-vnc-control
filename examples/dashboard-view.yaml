@@ -1,9 +1,9 @@
-# A Home Assistant dashboard view (sections) with the desktop full width. Paste it into the raw configuration editor
-# of a dashboard, under `views:`. Replace the URL (LAN, or your Cloudflare hostname with the path key, see README).
-# `password=` makes noVNC connect without asking; leave it out to type the VNC password each time.
-title: Desktop
-path: desktop
-icon: mdi:monitor-screenshot
+# A Home Assistant dashboard view (sections): the connector (collapsed until you need it) and every VNC session in one
+# full-width viewer. Paste it into the raw configuration editor of a dashboard, under `views:`. Replace the URL (LAN,
+# or your Cloudflare hostname with the path key, see README). Needs the helpers/scripts from home-assistant.yaml.
+title: VNC Control
+path: vnc-control
+icon: mdi:monitor-multiple
 type: sections
 max_columns: 4
 theme: VNC Control            # examples/themes/vnc_control.yaml: no side margins, small top margin, black borders
@@ -12,22 +12,48 @@ sections:
     column_span: 4
     cards:
       - type: heading
-        heading: Desktop
-        icon: mdi:monitor
-        grid_options:
-          columns: full
+        heading: VNC Control
+        icon: mdi:monitor-multiple
+        grid_options: {columns: full}
         badges:
           - type: button
-            text: Open in a tab
-            icon: mdi:open-in-new
-            tap_action:
-              action: url
-              url_path: &url https://desktop.example.com/PATH-KEY/vnc-control.html?autoconnect=1&resize=scale&reconnect=1&show_dot=1&password=VNC-PASSWORD
+            text: Connect another VNC
+            icon: mdi:plus-network
+            tap_action: {action: perform-action, perform_action: input_boolean.toggle, target: {entity_id: input_boolean.vnc_conector}}
+            visibility: [{condition: state, entity: input_boolean.vnc_conector, state: "off"}]
+          - type: button
+            text: Close connector
+            icon: mdi:chevron-up
+            tap_action: {action: perform-action, perform_action: input_boolean.toggle, target: {entity_id: input_boolean.vnc_conector}}
+            visibility: [{condition: state, entity: input_boolean.vnc_conector, state: "on"}]
+      - type: entities
+        grid_options: {columns: full}
+        visibility: &connector [{condition: state, entity: input_boolean.vnc_conector, state: "on"}]
+        entities:
+          - {entity: input_text.vnc_nombre, name: Name (same name = update)}
+          - {entity: input_text.vnc_ip, name: IP or hostname}
+          - {entity: input_number.vnc_puerto, name: VNC port (usually 5900)}
+          - {entity: input_text.vnc_contrasena, name: VNC password (optional)}
+          - {entity: input_text.vnc_resolucion, name: Its screen resolution}
+      - type: tile
+        entity: script.vnc_control_anadir
+        name: Add / update
+        hide_state: true
+        tap_action: {action: perform-action, perform_action: script.vnc_control_anadir}
+        grid_options: {columns: 6}
+        visibility: *connector
+      - type: tile
+        entity: script.vnc_control_quitar
+        name: Remove (by name)
+        hide_state: true
+        tap_action: {action: perform-action, perform_action: script.vnc_control_quitar}
+        grid_options: {columns: 6}
+        visibility: *connector
       - type: iframe
-        url: *url
-        aspect_ratio: 1024x600   # your screen's resolution
+        url: https://desktop.example.com/PATH-KEY/vnc-control-multi.html
+        aspect_ratio: 1024x600
         grid_options:
           columns: full
           # Sections views ignore aspect_ratio: the height is a whole number of rows (~62 px each with the theme).
-          # Pick the largest value that does not make the page scroll on your screen (15 for 1024x600 on 1080p).
+          # Pick the largest value that does not make the page scroll (15 for a 1024x600 screen on a 1080p monitor).
           rows: 15

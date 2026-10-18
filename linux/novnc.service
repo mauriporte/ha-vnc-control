@@ -5,7 +5,7 @@ Wants=x11vnc.service
 
 [Service]
 User=__USER__
-ExecStart=/usr/bin/websockify --web /usr/share/novnc __PORT__ 127.0.0.1:5900
+ExecStart=/usr/bin/websockify --web /usr/share/novnc --token-plugin TokenFile --token-source /etc/vnc-control/tokens/ __PORT__
 Restart=always
 RestartSec=5
 

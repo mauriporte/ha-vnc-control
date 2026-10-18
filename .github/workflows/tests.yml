@@ -13,3 +13,7 @@ jobs:
       - run: shellcheck linux/*.sh tests/*.sh
       - run: sh tests/test_make_page.sh
       - run: sh tests/test_make_page_real.sh
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest && python -m pytest tests
